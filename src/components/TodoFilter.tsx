@@ -1,57 +1,43 @@
 import { FilterType } from '@/types/todo';
 
-type Props = {
+interface Props {
   filter: FilterType;
   onFilter: (f: FilterType) => void;
   activeCount: number;
   completedCount: number;
   totalCount: number;
   onClearCompleted: () => void;
-};
+  dark?: boolean;
+}
 
-const tabs: { label: string; value: FilterType }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Active', value: 'active' },
-  { label: 'Completed', value: 'completed' },
+const TABS: { value: FilterType; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Done' },
 ];
 
-export default function TodoFilter({
-  filter,
-  onFilter,
-  activeCount,
-  completedCount,
-  totalCount,
-  onClearCompleted,
-}: Props) {
-  const countFor = (f: FilterType) => {
-    if (f === 'all') return totalCount;
-    if (f === 'active') return activeCount;
-    return completedCount;
-  };
+export default function TodoFilter({ filter, onFilter, activeCount, completedCount, totalCount, onClearCompleted, dark = false }: Props) {
+  const counts: Record<FilterType, number> = { all: totalCount, active: activeCount, completed: completedCount };
 
   return (
-    <div className="flex items-center justify-between gap-2 flex-wrap">
-      <div className="flex gap-1 bg-pink-50 p-1 rounded-xl">
-        {tabs.map(tab => (
+    <div className="flex items-center justify-between gap-2">
+      <div className={`flex gap-1 p-1 rounded-xl ${dark ? 'bg-gray-700' : 'bg-red-50'}`}>
+        {TABS.map(tab => (
           <button
             key={tab.value}
             onClick={() => onFilter(tab.value)}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               filter === tab.value
-                ? 'bg-white text-pink-600 shadow-sm'
-                : 'text-gray-500 hover:text-pink-500'
+                ? dark ? 'bg-gray-600 text-white shadow-sm' : 'bg-white text-red-600 shadow-sm'
+                : dark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-red-500'
             }`}
           >
             {tab.label}
-            <span
-              className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-                filter === tab.value
-                  ? 'bg-pink-100 text-pink-600'
-                  : 'bg-gray-200 text-gray-500'
-              }`}
-            >
-              {countFor(tab.value)}
-            </span>
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              filter === tab.value
+                ? 'bg-red-100 text-red-600'
+                : dark ? 'bg-gray-600 text-gray-300' : 'bg-gray-100 text-gray-400'
+            }`}>{counts[tab.value]}</span>
           </button>
         ))}
       </div>
@@ -59,10 +45,8 @@ export default function TodoFilter({
       {completedCount > 0 && (
         <button
           onClick={onClearCompleted}
-          className="text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
-        >
-          Clear completed ({completedCount})
-        </button>
+          className="text-xs text-gray-400 hover:text-red-500 transition-colors whitespace-nowrap"
+        >Clear done</button>
       )}
     </div>
   );

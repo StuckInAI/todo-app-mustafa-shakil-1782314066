@@ -1,135 +1,121 @@
 import { useState, useRef, useEffect } from 'react';
 import { Todo } from '@/types/todo';
 
-type Props = {
+interface Props {
   todo: Todo;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
-  onEdit: (id: string, newText: string) => void;
+  onEdit: (id: string, text: string) => void;
+  dark?: boolean;
+}
+
+const PRIORITY_BADGE: Record<string, string> = {
+  high: 'bg-red-100 text-red-600',
+  medium: 'bg-yellow-100 text-yellow-600',
+  low: 'bg-green-100 text-green-600',
 };
 
-export default function TodoItem({ todo, onToggle, onDelete, onEdit }: Props) {
+export default function TodoItem({ todo, onToggle, onDelete, onEdit, dark = false }: Props) {
   const [editing, setEditing] = useState(false);
-  const [editValue, setEditValue] = useState(todo.text);
+  const [draft, setDraft] = useState(todo.text);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }
+    if (editing) inputRef.current?.focus();
   }, [editing]);
 
-  const startEdit = () => {
-    setEditValue(todo.text);
-    setEditing(true);
-  };
-
-  const commitEdit = () => {
-    onEdit(todo.id, editValue);
+  const saveEdit = () => {
+    onEdit(todo.id, draft);
     setEditing(false);
   };
 
   const cancelEdit = () => {
-    setEditValue(todo.text);
+    setDraft(todo.text);
     setEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') commitEdit();
-    if (e.key === 'Escape') cancelEdit();
-  };
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const isOverdue = !todo.completed && todo.dueDate && new Date(todo.dueDate) < now;
+
+  const row = dark
+    ? 'bg-gray-700 border-gray-600 hover:border-gray-500'
+    : `bg-white border-gray-100 hover:border-red-200 ${isOverdue ? 'border-l-4 border-l-orange-400' : ''}`;
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-pink-100 shadow-sm group hover:border-pink-200 transition-colors">
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-sm group transition-colors ${row}`}>
       {/* Checkbox */}
       <button
         onClick={() => onToggle(todo.id)}
-        aria-label={todo.completed ? 'Mark as active' : 'Mark as complete'}
-        className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+        className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
           todo.completed
-            ? 'bg-pink-500 border-pink-500'
-            : 'border-pink-300 hover:border-pink-500'
+            ? 'bg-red-500 border-red-500 text-white'
+            : dark ? 'border-gray-400 hover:border-red-400' : 'border-red-300 hover:border-red-500'
         }`}
       >
         {todo.completed && (
-          <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <svg viewBox="0 0 12 12" className="w-3 h-3 fill-white">
+            <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         )}
       </button>
 
-      {/* Text / Edit input */}
-      {editing ? (
-        <input
-          ref={inputRef}
-          value={editValue}
-          onChange={e => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={commitEdit}
-          className="flex-1 text-sm text-gray-700 bg-pink-50 border border-pink-300 rounded-lg px-2 py-1 focus:outline-none focus:border-pink-500"
-        />
-      ) : (
-        <span
-          onDoubleClick={startEdit}
-          title="Double-click to edit"
-          className={`flex-1 text-sm select-none cursor-pointer ${
-            todo.completed ? 'line-through text-gray-400' : 'text-gray-700'
+      {/* Text */}
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+            onBlur={saveEdit}
+            className={`flex-1 text-sm rounded-lg px-2 py-1 focus:outline-none border transition-colors ${
+              dark ? 'bg-gray-600 border-gray-500 text-white focus:border-red-400' : 'bg-red-50 border-red-300 text-gray-700 focus:border-red-500'
+            }`}
+          />
+        ) : (
+          <span
+            onDoubleClick={() => setEditing(true)}
+            className={`text-sm select-none ${
+              todo.completed
+                ? dark ? 'line-through text-gray-500' : 'line-through text-gray-400'
+                : dark ? 'text-gray-100' : 'text-gray-700'
+            }`}
+          >{todo.text}</span>
+        )}
+
+        {/* Meta row */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`text-xs px-1.5 py-0.5 rounded-md font-medium ${PRIORITY_BADGE[todo.priority]}`}>
+            {todo.priority}
+          </span>
+          {todo.dueDate && (
+            <span className={`text-xs ${isOverdue ? 'text-orange-500 font-semibold' : dark ? 'text-gray-400' : 'text-gray-400'}`}>
+              {isOverdue ? '⚠️ ' : '📅 '}{todo.dueDate}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+              dark ? 'text-gray-400 hover:text-blue-400 hover:bg-gray-600' : 'text-gray-300 hover:text-blue-500 hover:bg-blue-50'
+            }`}
+            title="Edit"
+          >✏️</button>
+        )}
+        <button
+          onClick={() => onDelete(todo.id)}
+          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+            dark ? 'text-gray-400 hover:text-red-400 hover:bg-gray-600' : 'text-gray-300 hover:text-red-500 hover:bg-red-50'
           }`}
-        >
-          {todo.text}
-        </span>
-      )}
-
-      {/* Action buttons */}
-      {!editing && (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Edit button */}
-          <button
-            onClick={startEdit}
-            aria-label="Edit task"
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-pink-500 hover:bg-pink-50 transition-colors"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
-              <path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          {/* Delete button */}
-          <button
-            onClick={() => onDelete(todo.id)}
-            aria-label="Delete task"
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
-              <path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M6 7v5M10 7v5M5 4l.5 9h5l.5-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* Edit confirm/cancel */}
-      {editing && (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={commitEdit}
-            aria-label="Save"
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-green-500 hover:bg-green-50 transition-colors"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8l4 4 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <button
-            onClick={cancelEdit}
-            aria-label="Cancel"
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
-              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-      )}
+          title="Delete"
+        >🗑️</button>
+      </div>
     </div>
   );
 }
