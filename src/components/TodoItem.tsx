@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import type { Todo } from '@/types/todo';
+import { Todo } from '@/types/todo';
 
-interface TodoItemProps {
+type Props = {
   todo: Todo;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, newText: string) => void;
-}
+};
 
-export default function TodoItem({ todo, onToggle, onDelete, onEdit }: TodoItemProps) {
+export default function TodoItem({ todo, onToggle, onDelete, onEdit }: Props) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(todo.text);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -20,40 +20,41 @@ export default function TodoItem({ todo, onToggle, onDelete, onEdit }: TodoItemP
     }
   }, [editing]);
 
-  function startEdit() {
-    if (todo.completed) return;
+  const startEdit = () => {
     setEditValue(todo.text);
     setEditing(true);
-  }
+  };
 
-  function commitEdit() {
-    setEditing(false);
+  const commitEdit = () => {
     onEdit(todo.id, editValue);
-  }
+    setEditing(false);
+  };
 
-  function handleKeyDown(e: React.KeyboardEvent) {
+  const cancelEdit = () => {
+    setEditValue(todo.text);
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') commitEdit();
-    if (e.key === 'Escape') {
-      setEditValue(todo.text);
-      setEditing(false);
-    }
-  }
+    if (e.key === 'Escape') cancelEdit();
+  };
 
   return (
-    <li className="group flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-pink-100 transition-all duration-150">
+    <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-pink-100 shadow-sm group hover:border-pink-200 transition-colors">
       {/* Checkbox */}
       <button
         onClick={() => onToggle(todo.id)}
-        aria-label={todo.completed ? 'Mark as active' : 'Mark as completed'}
-        className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 cursor-pointer ${
+        aria-label={todo.completed ? 'Mark as active' : 'Mark as complete'}
+        className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
           todo.completed
             ? 'bg-pink-500 border-pink-500'
-            : 'border-slate-300 hover:border-pink-400 hover:bg-pink-50'
+            : 'border-pink-300 hover:border-pink-500'
         }`}
       >
         {todo.completed && (
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
       </button>
@@ -64,49 +65,71 @@ export default function TodoItem({ todo, onToggle, onDelete, onEdit }: TodoItemP
           ref={inputRef}
           value={editValue}
           onChange={e => setEditValue(e.target.value)}
-          onBlur={commitEdit}
           onKeyDown={handleKeyDown}
-          className="flex-1 text-sm text-slate-700 bg-pink-50 border border-pink-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-pink-400"
+          onBlur={commitEdit}
+          className="flex-1 text-sm text-gray-700 bg-pink-50 border border-pink-300 rounded-lg px-2 py-1 focus:outline-none focus:border-pink-500"
         />
       ) : (
         <span
           onDoubleClick={startEdit}
-          title={todo.completed ? '' : 'Double-click to edit'}
-          className={`flex-1 text-sm leading-relaxed transition-all duration-150 select-none ${
-            todo.completed
-              ? 'line-through text-slate-400 cursor-default'
-              : 'text-slate-700 cursor-text'
+          title="Double-click to edit"
+          className={`flex-1 text-sm select-none cursor-pointer ${
+            todo.completed ? 'line-through text-gray-400' : 'text-gray-700'
           }`}
         >
           {todo.text}
         </span>
       )}
 
-      {/* Edit hint — shown on hover for non-completed tasks */}
-      {!editing && !todo.completed && (
-        <button
-          onClick={startEdit}
-          aria-label="Edit task"
-          className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-pink-400 transition-all duration-150 cursor-pointer p-1 rounded"
-          title="Edit"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2a2 2 0 01.586-1.414z" />
-          </svg>
-        </button>
+      {/* Action buttons */}
+      {!editing && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Edit button */}
+          <button
+            onClick={startEdit}
+            aria-label="Edit task"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-pink-500 hover:bg-pink-50 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+              <path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          {/* Delete button */}
+          <button
+            onClick={() => onDelete(todo.id)}
+            aria-label="Delete task"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+              <path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M6 7v5M10 7v5M5 4l.5 9h5l.5-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
       )}
 
-      {/* Delete button — always visible, prominent */}
-      <button
-        onClick={() => onDelete(todo.id)}
-        aria-label="Delete task"
-        className="text-slate-200 hover:text-red-400 hover:bg-red-50 transition-all duration-150 cursor-pointer p-1.5 rounded-lg flex-shrink-0"
-        title="Delete"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V4a1 1 0 011-1h6a1 1 0 011 1v3" />
-        </svg>
-      </button>
-    </li>
+      {/* Edit confirm/cancel */}
+      {editing && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={commitEdit}
+            aria-label="Save"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-green-500 hover:bg-green-50 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8l4 4 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            onClick={cancelEdit}
+            aria-label="Cancel"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

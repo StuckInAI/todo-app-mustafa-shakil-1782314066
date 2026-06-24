@@ -1,50 +1,46 @@
 import { useState, useEffect } from 'react';
-import type { Todo, FilterType } from '@/types/todo';
+import { Todo, FilterType } from '@/types/todo';
 
-const STORAGE_KEY = 'todo-app-todos';
-
-function loadFromStorage(): Todo[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Todo[]) : [];
-  } catch {
-    return [];
-  }
+function generateId() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
 export function useTodos() {
-  const [todos, setTodos] = useState<Todo[]>(loadFromStorage);
+  const [todos, setTodos] = useState<Todo[]>(() => {
+    try {
+      const stored = localStorage.getItem('todos');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [filter, setFilter] = useState<FilterType>('all');
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+    localStorage.setItem('todos', JSON.stringify(todos));
   }, [todos]);
 
-  function addTodo(text: string) {
+  const addTodo = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
     setTodos(prev => [
-      {
-        id: crypto.randomUUID(),
-        text: trimmed,
-        completed: false,
-        createdAt: Date.now(),
-      },
+      { id: generateId(), text: trimmed, completed: false, createdAt: Date.now() },
       ...prev,
     ]);
-  }
+  };
 
-  function toggleTodo(id: string) {
+  const toggleTodo = (id: string) => {
     setTodos(prev =>
       prev.map(t => (t.id === id ? { ...t, completed: !t.completed } : t))
     );
-  }
+  };
 
-  function deleteTodo(id: string) {
+  const deleteTodo = (id: string) => {
     setTodos(prev => prev.filter(t => t.id !== id));
-  }
+  };
 
-  function editTodo(id: string, newText: string) {
+  const editTodo = (id: string, newText: string) => {
     const trimmed = newText.trim();
     if (!trimmed) {
       deleteTodo(id);
@@ -53,11 +49,11 @@ export function useTodos() {
     setTodos(prev =>
       prev.map(t => (t.id === id ? { ...t, text: trimmed } : t))
     );
-  }
+  };
 
-  function clearCompleted() {
+  const clearCompleted = () => {
     setTodos(prev => prev.filter(t => !t.completed));
-  }
+  };
 
   const filteredTodos = todos.filter(t => {
     if (filter === 'active') return !t.completed;
@@ -70,8 +66,7 @@ export function useTodos() {
   const totalCount = todos.length;
 
   return {
-    todos,
-    filteredTodos,
+    todos: filteredTodos,
     filter,
     setFilter,
     addTodo,
